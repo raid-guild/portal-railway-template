@@ -4,6 +4,8 @@ import React from 'react'
 
 import { SponsorInquiryForm } from '../_components/SponsorInquiryForm'
 
+export const dynamic = 'force-dynamic'
+
 export default function SponsorPage() {
   return (
     <main className="container pb-24 pt-12">
