@@ -80,8 +80,10 @@ export interface Config {
     badges: Badge;
     profileBadges: ProfileBadge;
     modules: Module;
+    spotlights: Spotlight;
     notifications: Notification;
     notificationPreferences: NotificationPreference;
+    feedbackSubmissions: FeedbackSubmission;
     pageCopy: PageCopy;
     profiles: Profile;
     profileSkills: ProfileSkill;
@@ -116,8 +118,10 @@ export interface Config {
     badges: BadgesSelect<false> | BadgesSelect<true>;
     profileBadges: ProfileBadgesSelect<false> | ProfileBadgesSelect<true>;
     modules: ModulesSelect<false> | ModulesSelect<true>;
+    spotlights: SpotlightsSelect<false> | SpotlightsSelect<true>;
     notifications: NotificationsSelect<false> | NotificationsSelect<true>;
     notificationPreferences: NotificationPreferencesSelect<false> | NotificationPreferencesSelect<true>;
+    feedbackSubmissions: FeedbackSubmissionsSelect<false> | FeedbackSubmissionsSelect<true>;
     pageCopy: PageCopySelect<false> | PageCopySelect<true>;
     profiles: ProfilesSelect<false> | ProfilesSelect<true>;
     profileSkills: ProfileSkillsSelect<false> | ProfileSkillsSelect<true>;
@@ -609,6 +613,17 @@ export interface Event {
         url: string;
         label?: string | null;
         publishedAt?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Session-specific links such as notes, slides, docs, repos, or artifacts.
+   */
+  resources?:
+    | {
+        label: string;
+        url: string;
+        resourceType?: ('link' | 'notes' | 'slides' | 'doc' | 'repo' | 'design' | 'artifact' | 'other') | null;
         id?: string | null;
       }[]
     | null;
@@ -1467,6 +1482,38 @@ export interface Module {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "spotlights".
+ */
+export interface Spotlight {
+  id: number;
+  title: string;
+  summary?: string | null;
+  kind: 'featured' | 'announcement';
+  visibility: 'public' | 'authenticated' | 'member' | 'admin';
+  startsAt?: string | null;
+  /**
+   * Announcements should usually expire after the relevant event or deadline.
+   */
+  expiresAt?: string | null;
+  priority?: number | null;
+  targetType: 'thread' | 'event' | 'project' | 'post' | 'profile' | 'external' | 'artifact';
+  targetThread?: (number | null) | Thread;
+  targetEvent?: (number | null) | Event;
+  targetProject?: (number | null) | Project;
+  targetPost?: (number | null) | Post;
+  targetProfile?: (number | null) | Profile;
+  externalURL?: string | null;
+  artifactURL?: string | null;
+  ctaLabel?: string | null;
+  image?: (number | null) | Media;
+  createdBy?: (number | null) | User;
+  publishedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "notifications".
  */
 export interface Notification {
@@ -1526,6 +1573,46 @@ export interface NotificationPreference {
   activityDigestFrequency: 'none' | 'daily' | 'weekly';
   weeklyDigest: 'in_app' | 'email' | 'muted';
   badgeAwards: 'in_app' | 'email' | 'muted';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Private user feedback, bug reports, and product ideas for admin triage.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "feedbackSubmissions".
+ */
+export interface FeedbackSubmission {
+  id: number;
+  type: 'bug' | 'feedback' | 'idea' | 'content_issue' | 'account_issue' | 'other';
+  status: 'new' | 'triaged' | 'planned' | 'resolved' | 'closed' | 'spam';
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  title: string;
+  message: string;
+  email?: string | null;
+  submittedBy?: (number | null) | User;
+  submittedProfile?: (number | null) | Profile;
+  pageURL?: string | null;
+  userAgent?: string | null;
+  viewport?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  adminNotes?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1692,7 +1779,7 @@ export interface Comment {
         value: number | ContributionRequest;
       };
   /**
-   * Comments must be approved before they appear publicly
+   * Visible comments can be hidden by unchecking this field.
    */
   isApproved?: boolean | null;
   publishedAt?: string | null;
@@ -1849,12 +1936,20 @@ export interface PayloadLockedDocument {
         value: number | Module;
       } | null)
     | ({
+        relationTo: 'spotlights';
+        value: number | Spotlight;
+      } | null)
+    | ({
         relationTo: 'notifications';
         value: number | Notification;
       } | null)
     | ({
         relationTo: 'notificationPreferences';
         value: number | NotificationPreference;
+      } | null)
+    | ({
+        relationTo: 'feedbackSubmissions';
+        value: number | FeedbackSubmission;
       } | null)
     | ({
         relationTo: 'pageCopy';
@@ -2283,6 +2378,14 @@ export interface EventsSelect<T extends boolean = true> {
         publishedAt?: T;
         id?: T;
       };
+  resources?:
+    | T
+    | {
+        label?: T;
+        url?: T;
+        resourceType?: T;
+        id?: T;
+      };
   relatedProjects?: T;
   relatedThreads?: T;
   relatedProfiles?: T;
@@ -2560,6 +2663,34 @@ export interface ModulesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "spotlights_select".
+ */
+export interface SpotlightsSelect<T extends boolean = true> {
+  title?: T;
+  summary?: T;
+  kind?: T;
+  visibility?: T;
+  startsAt?: T;
+  expiresAt?: T;
+  priority?: T;
+  targetType?: T;
+  targetThread?: T;
+  targetEvent?: T;
+  targetProject?: T;
+  targetPost?: T;
+  targetProfile?: T;
+  externalURL?: T;
+  artifactURL?: T;
+  ctaLabel?: T;
+  image?: T;
+  createdBy?: T;
+  publishedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "notifications_select".
  */
 export interface NotificationsSelect<T extends boolean = true> {
@@ -2601,6 +2732,27 @@ export interface NotificationPreferencesSelect<T extends boolean = true> {
   activityDigestFrequency?: T;
   weeklyDigest?: T;
   badgeAwards?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "feedbackSubmissions_select".
+ */
+export interface FeedbackSubmissionsSelect<T extends boolean = true> {
+  type?: T;
+  status?: T;
+  priority?: T;
+  title?: T;
+  message?: T;
+  email?: T;
+  submittedBy?: T;
+  submittedProfile?: T;
+  pageURL?: T;
+  userAgent?: T;
+  viewport?: T;
+  metadata?: T;
+  adminNotes?: T;
   updatedAt?: T;
   createdAt?: T;
 }

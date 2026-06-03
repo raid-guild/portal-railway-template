@@ -16,6 +16,7 @@ import { ContributionRequests } from './collections/ContributionRequests'
 import { DailyBriefs } from './collections/DailyBriefs'
 import { DailyEngagements } from './collections/DailyEngagements'
 import { Events } from './collections/Events'
+import { FeedbackSubmissions } from './collections/FeedbackSubmissions'
 import { Inquiries } from './collections/Inquiries'
 import { Media } from './collections/Media'
 import { Modules } from './collections/Modules'
@@ -31,6 +32,7 @@ import { ProfileSkills } from './collections/ProfileSkills'
 import { Projects } from './collections/Projects'
 import { Posts } from './collections/Posts'
 import { SponsorInquiries } from './collections/SponsorInquiries'
+import { Spotlights } from './collections/Spotlights'
 import { Threads } from './collections/Threads'
 import { Users } from './collections/Users'
 import { siteConfig } from './config/site'
@@ -125,8 +127,10 @@ export default buildConfig({
     Badges,
     ProfileBadges,
     Modules,
+    Spotlights,
     Notifications,
     NotificationPreferences,
+    FeedbackSubmissions,
     PageCopy,
     Profiles,
     ProfileSkills,

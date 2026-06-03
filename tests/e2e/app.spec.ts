@@ -198,6 +198,38 @@ async function getApprovedCommentCount(page: Page) {
   return body.docs.length as number
 }
 
+async function createAndLoginCommentVisitor(adminPage: Page, visitorPage: Page) {
+  const suffix = Date.now()
+  const email = `comment-visitor-${suffix}@example.com`
+  const password = 'ChangeMe123!'
+  const name = 'Playwright Visitor'
+
+  const response = await adminPage.request.post('/api/users', {
+    data: {
+      email,
+      name,
+      password,
+      roles: ['member'],
+    },
+  })
+
+  expect(response.status()).toBe(201)
+
+  const loginResponse = await visitorPage.request.post('/api/users/login', {
+    data: {
+      email,
+      password,
+    },
+  })
+
+  expect(loginResponse.ok()).toBeTruthy()
+
+  await visitorPage.goto('/dashboard')
+  await expect(visitorPage).toHaveURL(/\/dashboard/)
+
+  return { email, name }
+}
+
 async function verifySeededPosts(page: Page) {
   await page.goto('/posts')
   await expect(page.getByRole('heading', { name: 'Posts' })).toBeVisible()
@@ -354,7 +386,9 @@ async function verifySeededProjectSpike(page: Page) {
   await expect(page.getByText('Defining the project spike object')).toBeVisible()
   await expect(page.getByText('Calendar and session coordination')).toBeVisible()
   await expect(
-    page.getByText('Community narrowed the portal around project spikes instead of broad PM tooling.'),
+    page.getByText(
+      'Community narrowed the portal around project spikes instead of broad PM tooling.',
+    ),
   ).toBeVisible()
   await expect(page.getByText('Community Working Session')).toBeVisible()
   await expect(page.getByText('Discord #community-voice')).toBeVisible()
@@ -2163,7 +2197,9 @@ async function verifyDashboardBrief(page: Page) {
   await expect(page.getByRole('heading', { name: 'Active Threads' })).toBeVisible()
   await expect(page.getByText('Defining the project spike object')).toBeVisible()
   await expect(
-    page.getByText('Community narrowed the portal around project spikes instead of broad PM tooling.'),
+    page.getByText(
+      'Community narrowed the portal around project spikes instead of broad PM tooling.',
+    ),
   ).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Ways to Engage' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Next Upcoming Sessions' })).toBeVisible()
@@ -2845,18 +2881,15 @@ test('supports onboarding, seeding, and comment moderation', async ({ browser, p
   await inquiryContext.close()
 
   await submitSponsorInquiry(publicPage, page)
+  const commentVisitor = await createAndLoginCommentVisitor(page, publicPage)
   await publicPage.goto(`/posts/${targetPost.slug}`)
   await expect(publicPage.getByRole('heading', { name: 'Comments' })).toBeVisible()
+  await expect(publicPage.getByText(`Posting as ${commentVisitor.name}`)).toBeVisible()
 
-  await fillFirst(publicPage.getByLabel(/^name$/i), 'Playwright Visitor')
-  await fillFirst(publicPage.getByLabel(/email/i), 'visitor@example.com')
   await fillFirst(publicPage.getByLabel(/comment/i), commentText)
   await publicPage.getByRole('button', { name: /submit comment/i }).click()
 
   await expect(publicPage.getByText(/comment submitted successfully/i)).toBeVisible()
-  await expect(publicPage.getByText(commentText)).toHaveCount(0)
-
-  await approveComment(page)
 
   await expect
     .poll(async () => getApprovedCommentCount(publicPage), {

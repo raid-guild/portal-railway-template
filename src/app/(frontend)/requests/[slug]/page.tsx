@@ -192,7 +192,12 @@ export default async function ContributionRequestPage({ params: paramsPromise }:
         </Section>
       ) : null}
 
-      <Comments parent={{ relationTo: 'contributionRequests', value: request.id }} />
+      <Comments
+        canComment={Boolean(user)}
+        commenterLabel={user?.name || user?.email}
+        loginHref={`/login?next=${encodeURIComponent(`/requests/${request.slug}`)}`}
+        parent={{ relationTo: 'contributionRequests', value: request.id }}
+      />
     </main>
   )
 }
@@ -203,7 +208,7 @@ export async function generateMetadata({ params: paramsPromise }: Args): Promise
   const request = await queryContributionRequestBySlug({ slug, user })
 
   return {
-    description: request?.summary || 'community contribution request.',
+    description: request?.summary || 'Community contribution request.',
     title: request?.title || 'Contribution request',
   }
 }
