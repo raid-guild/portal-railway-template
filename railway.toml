@@ -3,7 +3,7 @@ builder = "railpack"
 buildCommand = "pnpm railway:build"
 
 [deploy]
-startCommand = "pnpm start"
+startCommand = "pnpm railway:start"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"

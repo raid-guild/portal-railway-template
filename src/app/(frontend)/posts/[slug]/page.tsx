@@ -13,6 +13,7 @@ import { Comments } from '@/components/Comments'
 import type { Event, Post, Thread } from '@/payload-types'
 
 import { PostHero } from '@/heros/PostHero'
+import { skipDatabaseDuringBuild } from '@/utilities/buildFlags'
 import { generateMeta } from '@/utilities/generateMeta'
 import { getCurrentUser } from '@/utilities/getCurrentUser'
 import PageClient from './page.client'
@@ -20,6 +21,8 @@ import PageClient from './page.client'
 export const dynamic = 'force-dynamic'
 
 export async function generateStaticParams() {
+  if (skipDatabaseDuringBuild) return []
+
   const payload = await getPayload({ config: configPromise })
   const posts = await payload.find({
     collection: 'posts',

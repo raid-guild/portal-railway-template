@@ -1,6 +1,7 @@
 import { getPayload } from 'payload'
 
 import configPromise from '@payload-config'
+import { skipDatabaseDuringBuild } from './buildFlags'
 
 export type FunnelLinkCopy = {
   description: string
@@ -215,6 +216,8 @@ export const getInquiryPageCopy = (type: InquiryType) =>
   getPageCopy(`inquire-${type}`, inquiryPageFallbacks[type])
 
 const getPageCopy = async (key: string, fallback: ProductPageCopy): Promise<ProductPageCopy> => {
+  if (skipDatabaseDuringBuild) return fallback
+
   try {
     const payload = await getPayload({ config: configPromise })
     const result = await payload.find({
