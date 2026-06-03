@@ -3,7 +3,6 @@ builder = "railpack"
 buildCommand = "pnpm railway:build"
 
 [deploy]
-preDeployCommand = ["pnpm payload migrate"]
 startCommand = "pnpm start"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 300
