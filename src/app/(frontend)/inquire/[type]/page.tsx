@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { InquiryForm } from '../../_components/InquiryForm'
+import { skipDatabaseDuringBuild } from '@/utilities/buildFlags'
 import { getInquiryPageCopy, inquiryPageFallbacks, type InquiryType } from '@/utilities/pageCopy'
 
 type Args = {
@@ -52,6 +53,8 @@ export default async function InquiryPage({ params }: Args) {
 }
 
 export function generateStaticParams() {
+  if (skipDatabaseDuringBuild) return []
+
   return Object.keys(inquiryPageFallbacks).map((type) => ({ type }))
 }
 
