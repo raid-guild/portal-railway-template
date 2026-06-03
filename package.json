@@ -4,6 +4,7 @@
   "description": "Community portal template built with Payload, Next.js, and Railway",
   "license": "MIT",
   "type": "module",
+  "packageManager": "pnpm@9.15.9",
   "scripts": {
     "build": "payload generate:importmap && payload migrate && cross-env NODE_OPTIONS=--no-deprecation next build",
     "db:reset:local": "node scripts/resetLocalDatabase.mjs",
