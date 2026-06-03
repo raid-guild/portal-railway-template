@@ -1,0 +1,11 @@
+[build]
+builder = "railpack"
+buildCommand = "corepack pnpm railway:build"
+
+[deploy]
+preDeployCommand = ["corepack pnpm payload migrate"]
+startCommand = "corepack pnpm start"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
