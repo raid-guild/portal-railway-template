@@ -4,8 +4,8 @@ import { headers } from 'next/headers'
 import { getPayload } from 'payload'
 
 import type { User } from '@/payload-types'
-import { siteConfig } from '@/config/site'
 import { getServerSideURL } from '@/utilities/getURL'
+import { renderTransactionalEmail } from '@/utilities/transactionalEmail'
 
 type UserRole = Exclude<NonNullable<User['roles']>[number], undefined>
 
@@ -103,12 +103,22 @@ export async function POST(request: Request) {
 
     try {
       await payload.sendEmail({
-        html: `
-          <p>Verify your ${siteConfig.name} account email.</p>
-          <p><a href="${verificationURL}">Verify this email address</a></p>
-          <p>This link expires in 30 minutes. If you did not request this, you can ignore this email.</p>
-        `,
-        subject: `Verify your ${siteConfig.name} email`,
+        html: renderTransactionalEmail({
+          action: {
+            href: verificationURL,
+            label: 'Verify email',
+          },
+          footer:
+            'This link expires in 30 minutes. If you did not request it, you can ignore this email.',
+          intro:
+            'Confirm this address so your portal account can use contributor actions, check-ins, and notification delivery.',
+          preheader: 'Verify your Community Portal account email.',
+          sections: [
+            'Email verification helps keep member and contributor activity tied to a trusted account.',
+          ],
+          title: 'Verify your portal email',
+        }),
+        subject: 'Verify your Community Portal email',
         to: user.email,
       })
     } catch (error) {

@@ -3,24 +3,26 @@ import Link from 'next/link'
 import React from 'react'
 
 import configPromise from '@payload-config'
-import { getPayload } from 'payload'
+import { getPayload, type Payload, type Where } from 'payload'
 
 import { canContributeContent } from '@/access/roles'
+import { PageRange } from '@/components/PageRange'
 import type { Event, Profile, Project, Thread } from '@/payload-types'
 import { createGoogleCalendarURL } from '@/utilities/calendarLinks'
 import { getCurrentUser } from '@/utilities/getCurrentUser'
 import { toSafeURL } from '@/utilities/safeURL'
+import { LocalDateBadge, LocalDateTime } from '../_components/LocalSessionTime'
+import {
+  getListPageValue,
+  getListQueryValue,
+  PortalPagination,
+  PortalSearchForm,
+  type ListSearchParams,
+} from '../_components/PortalListControls'
 
 export const dynamic = 'force-dynamic'
 
-const formatDateTime = (date?: string | null) => {
-  if (!date) return null
-
-  return new Intl.DateTimeFormat('en', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(date))
-}
+const EVENTS_PER_PAGE = 24
 
 const relationDocs = <T extends { id: number }>(items?: (number | T)[] | null): T[] =>
   items?.filter((item): item is T => item !== null && typeof item === 'object') || []
@@ -59,17 +61,25 @@ const sourceStatusLabels: Record<NonNullable<Event['sourceStatus']>, string> = {
   summarized: 'Summarized',
 }
 
-export default async function EventsPage() {
-  const user = await getCurrentUser()
-  const events = await getEvents(user)
+type Args = {
+  searchParams?: Promise<ListSearchParams>
+}
+
+export default async function EventsPage({ searchParams: searchParamsPromise }: Args) {
+  const [user, searchParams] = await Promise.all([getCurrentUser(), searchParamsPromise])
+  const query = getListQueryValue(searchParams?.q)
+  const page = getListPageValue(searchParams?.page)
+  const events = await getEvents(user, { page, query })
   const now = Date.now()
-  const live = events.filter((event) => isLiveEvent(event, now))
-  const upcoming = events.filter(
+  const live = events.docs.filter((event) => isLiveEvent(event, now))
+  const upcoming = events.docs.filter(
     (event) => !isLiveEvent(event, now) && new Date(event.startsAt).getTime() >= now,
   )
-  const past = events.filter(
+  const past = events.docs.filter(
     (event) => !isLiveEvent(event, now) && new Date(event.startsAt).getTime() < now,
   )
+  upcoming.sort((a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime())
+  past.sort((a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime())
   const canManageSessions = canContributeContent(user)
 
   return (
@@ -80,7 +90,7 @@ export default async function EventsPage() {
           <h1 className="portal-title">Community sessions</h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground">
             Live sessions, project spike syncs, and calendar anchors. Add sessions to your own
-            calendar so the next live moment is not buried in Discord.
+            calendar so the next live moment is not buried in chat.
           </p>
         </div>
         {canManageSessions ? (
@@ -89,6 +99,22 @@ export default async function EventsPage() {
           </Link>
         ) : null}
       </section>
+
+      <PortalSearchForm
+        action="/events"
+        label="Search sessions"
+        placeholder="Search by session title, summary, location, type, or series"
+        query={query}
+      />
+
+      <div className="mt-8">
+        <PageRange
+          collectionLabels={{ plural: 'Sessions', singular: 'Session' }}
+          currentPage={events.page}
+          limit={EVENTS_PER_PAGE}
+          totalDocs={events.totalDocs}
+        />
+      </div>
 
       {live.length ? (
         <section className="mt-10 border border-primary/40 bg-primary/10 p-5">
@@ -114,7 +140,11 @@ export default async function EventsPage() {
               <SessionRow canManageSessions={canManageSessions} event={event} key={event.id} />
             ))
           ) : (
-            <p className="text-sm text-muted-foreground">No upcoming sessions are published yet.</p>
+            <p className="text-sm text-muted-foreground">
+              {query
+                ? 'No upcoming sessions match that search on this page.'
+                : 'No upcoming sessions are published yet.'}
+            </p>
           )}
         </div>
       </section>
@@ -134,6 +164,13 @@ export default async function EventsPage() {
           </div>
         </section>
       ) : null}
+
+      <PortalPagination
+        basePath="/events"
+        page={events.page}
+        query={query}
+        totalPages={events.totalPages}
+      />
     </main>
   )
 }
@@ -165,16 +202,10 @@ const SessionRow: React.FC<{
           ? [speaker.displayName].filter(Boolean)
           : []
   const sessionType = event.sessionType || 'brownbag'
-  const startsAt = new Date(event.startsAt)
-  const day = new Intl.DateTimeFormat('en', { weekday: 'short' }).format(startsAt)
-  const date = new Intl.DateTimeFormat('en', { day: '2-digit' }).format(startsAt)
 
   return (
     <article className="grid gap-4 border-b border-border py-4 sm:grid-cols-[4rem_1fr]">
-      <div className="flex items-baseline gap-2 sm:block">
-        <p className="font-mono text-xs uppercase text-muted-foreground">{day}</p>
-        <p className="font-display text-2xl font-bold leading-none text-foreground">{date}</p>
-      </div>
+      <LocalDateBadge timestamp={event.startsAt} />
       <div
         className={`rounded-sm border p-5 ${
           isLive ? 'border-primary bg-primary/15' : sessionTypeStyles[sessionType]
@@ -193,9 +224,7 @@ const SessionRow: React.FC<{
                     : ''}
                 </span>
               ) : null}
-              <span className="text-sm text-muted-foreground">
-                {formatDateTime(event.startsAt)}
-              </span>
+              <LocalDateTime className="text-sm text-muted-foreground" timestamp={event.startsAt} />
             </div>
             <h3 className="mt-3 portal-heading-sm">
               <Link className="transition-colors hover:text-primary" href={`/events/${event.id}`}>
@@ -312,22 +341,109 @@ const isLiveEvent = (event: Event, now: number): boolean => {
   return startsAt <= now && endsAt > now
 }
 
-const getEvents = async (user: Awaited<ReturnType<typeof getCurrentUser>>) => {
+const getEvents = async (
+  user: Awaited<ReturnType<typeof getCurrentUser>>,
+  {
+    page,
+    query,
+  }: {
+    page: number
+    query: string
+  },
+) => {
   const payload = await getPayload({ config: configPromise })
-  const result = await payload.find({
+  const [matchingProjectIDs, matchingThreadIDs] = query
+    ? await Promise.all([
+        getMatchingRelatedIDs(payload, 'projects', query),
+        getMatchingRelatedIDs(payload, 'threads', query),
+      ])
+    : [[], []]
+  const where: Where = {
+    and: [
+      {
+        _status: {
+          equals: 'published',
+        },
+      },
+    ],
+  }
+
+  if (query) {
+    const searchWhere: NonNullable<Where['or']> = [
+      {
+        title: {
+          like: query,
+        },
+      },
+      {
+        summary: {
+          like: query,
+        },
+      },
+      {
+        locationLabel: {
+          like: query,
+        },
+      },
+      {
+        seriesTitle: {
+          like: query,
+        },
+      },
+    ]
+
+    if (matchingProjectIDs.length) {
+      searchWhere.push({
+        relatedProjects: {
+          in: matchingProjectIDs,
+        },
+      })
+    }
+
+    if (matchingThreadIDs.length) {
+      searchWhere.push({
+        relatedThreads: {
+          in: matchingThreadIDs,
+        },
+      })
+    }
+
+    where.and?.push({
+      or: searchWhere,
+    })
+  }
+
+  return payload.find({
     collection: 'events',
     depth: 2,
     draft: false,
-    limit: 100,
+    limit: EVENTS_PER_PAGE,
     overrideAccess: false,
-    sort: 'startsAt',
+    page,
+    sort: '-startsAt',
     user: user || undefined,
+    where,
+  })
+}
+
+const getMatchingRelatedIDs = async (
+  payload: Payload,
+  collection: 'projects' | 'threads',
+  query: string,
+): Promise<(number | string)[]> => {
+  const result = await payload.find({
+    collection,
+    depth: 0,
+    draft: false,
+    limit: 100,
+    overrideAccess: true,
+    pagination: false,
     where: {
-      _status: {
-        equals: 'published',
+      title: {
+        like: query,
       },
     },
   })
 
-  return result.docs
+  return result.docs.map((doc) => doc.id)
 }

@@ -476,8 +476,8 @@ export const seedPortalContent = async ({
         title: 'Community Working Session',
         summary:
           'Follow-up sync to review scaffolding, work ownership, and the first rendered brief/project surfaces.',
-        startsAt: '2026-06-03T17:00:00.000Z',
-        endsAt: '2026-06-03T18:00:00.000Z',
+        startsAt: '2030-06-03T17:00:00.000Z',
+        endsAt: '2030-06-03T18:00:00.000Z',
         sessionType: 'workshop',
         locationLabel: 'Discord #community-voice',
         joinURL: nextSessionJoinURL,
